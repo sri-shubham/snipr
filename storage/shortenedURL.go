@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 
+	"github.com/redis/go-redis/v9"
+	"github.com/sri-shubham/snipr/storage/cache/redisCache"
 	"github.com/sri-shubham/snipr/storage/models"
 	"github.com/sri-shubham/snipr/storage/persist/postgres"
 	"github.com/uptrace/bun"
@@ -16,5 +18,11 @@ type URLStorage interface {
 func NewPGShortenedURLStorage(db *bun.DB) URLStorage {
 	return postgres.PGShortenedURLStorage{
 		DB: db,
+	}
+}
+
+func NewRedisShortenedURLStorage(db *redis.Client) URLStorage {
+	return redisCache.RedisShortenedURLStorage{
+		Redis: db,
 	}
 }

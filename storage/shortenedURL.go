@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/sri-shubham/snipr/storage/cache/redisCache"
+	rediscache "github.com/sri-shubham/snipr/storage/cache/redisCache"
 	"github.com/sri-shubham/snipr/storage/models"
 	"github.com/sri-shubham/snipr/storage/persist/postgres"
 	"github.com/uptrace/bun"
@@ -22,7 +22,7 @@ func NewPGShortenedURLStorage(db *bun.DB) URLStorage {
 }
 
 func NewRedisShortenedURLStorage(db *redis.Client) URLStorage {
-	return redisCache.RedisShortenedURLStorage{
+	return rediscache.RedisShortenedURLStorage{
 		Redis: db,
 	}
 }

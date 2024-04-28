@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sri-shubham/snipr/internal/shorten"
@@ -17,20 +18,24 @@ type ShortenUrlService interface {
 	Shorten(w http.ResponseWriter, r *http.Request)
 	ShortenCustom(w http.ResponseWriter, r *http.Request)
 	DomainReport(w http.ResponseWriter, r *http.Request)
+	Redirect(w http.ResponseWriter, r *http.Request)
 }
 
 type shortenURLServiceImpl struct {
 	shortener shorten.Shortener
 	report    storage.URLReport
+	storage   storage.URLStorage
 }
 
 func NewShortenURLService(
 	shortener shorten.Shortener,
 	report storage.URLReport,
+	storage storage.URLStorage,
 ) ShortenUrlService {
 	return &shortenURLServiceImpl{
 		shortener: shortener,
 		report:    report,
+		storage:   storage,
 	}
 }
 
@@ -46,6 +51,10 @@ func (s *shortenURLServiceImpl) Shorten(w http.ResponseWriter, r *http.Request) 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		WriteJsonErrorResponseWithCode(w, err, "Failed to unmarshal JSON", http.StatusBadRequest)
 		return
+	}
+
+	if !strings.HasPrefix(requestBody.OriginalURL, "http://") && !strings.HasPrefix(requestBody.OriginalURL, "https://") {
+		requestBody.OriginalURL = "https://" + requestBody.OriginalURL
 	}
 
 	requestUrl, err := url.Parse(requestBody.OriginalURL)
@@ -97,6 +106,10 @@ func (s *shortenURLServiceImpl) ShortenCustom(w http.ResponseWriter, r *http.Req
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, "Failed to unmarshal JSON", http.StatusBadRequest)
 		return
+	}
+
+	if !strings.HasPrefix(requestBody.OriginalURL, "http://") && !strings.HasPrefix(requestBody.OriginalURL, "https://") {
+		requestBody.OriginalURL = "https://" + requestBody.OriginalURL
 	}
 
 	requestUrl, err := url.Parse(requestBody.OriginalURL)
@@ -176,4 +189,22 @@ func (s *shortenURLServiceImpl) DomainReport(w http.ResponseWriter, r *http.Requ
 	}
 
 	WriteJsonResponseWithCode(w, out, http.StatusOK)
+}
+
+// Redirect implements ShortenUrlService.
+func (s *shortenURLServiceImpl) Redirect(w http.ResponseWriter, r *http.Request) {
+	requestedURL := r.URL.String()
+
+	shortURL, err := s.storage.GetOriginalURL(r.Context(), requestedURL)
+	if err != nil {
+		WriteJsonErrorResponseWithCode(w, err, "Failed to get domain report", http.StatusBadRequest)
+		return
+	}
+
+	if shortURL.TTLInSeconds <= 0 {
+		WriteJsonResponseWithCode(w, []byte("Not found"), http.StatusNotFound)
+		return
+	}
+
+	http.Redirect(w, r, shortURL.URL.String(), http.StatusFound)
 }

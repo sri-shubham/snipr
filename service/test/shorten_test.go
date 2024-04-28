@@ -23,7 +23,7 @@ func TestShortenHTTPHandler(t *testing.T) {
 
 	shortenMock := shorten.NewMockShortener(ctrl)
 
-	shortenService := service.NewShortenURLService(shortenMock, nil)
+	shortenService := service.NewShortenURLService(shortenMock, nil, nil)
 
 	reqBody := &service.ShortenRequest{
 		OriginalURL: "https://en.wikipedia.org/wiki/URL_shortening",
@@ -66,7 +66,7 @@ func TestShortenHTTPHandlerInvalidURL(t *testing.T) {
 
 	shortenMock := shorten.NewMockShortener(ctrl)
 
-	shortenService := service.NewShortenURLService(shortenMock, nil)
+	shortenService := service.NewShortenURLService(shortenMock, nil, nil)
 
 	reqBody := &service.ShortenRequest{
 		OriginalURL: "https://en.wiki pedia.org/wiki/URL_shortening",
@@ -97,7 +97,7 @@ func TestShortenCustomHTTPHandler(t *testing.T) {
 
 	shortenMock := shorten.NewMockShortener(ctrl)
 
-	shortenService := service.NewShortenURLService(shortenMock, nil)
+	shortenService := service.NewShortenURLService(shortenMock, nil, nil)
 
 	reqBody := &service.ShortenCustomRequest{
 		OriginalURL: "https://en.wikipedia.org/wiki/URL_shortening",
@@ -141,7 +141,7 @@ func TestShortenCustomHTTPHandlerWhenCodeIsAlreadyUsed(t *testing.T) {
 
 	shortenMock := shorten.NewMockShortener(ctrl)
 
-	shortenService := service.NewShortenURLService(shortenMock, nil)
+	shortenService := service.NewShortenURLService(shortenMock, nil, nil)
 
 	reqBody := &service.ShortenCustomRequest{
 		OriginalURL: "https://en.wikipedia.org/wiki/URL_shortening",
@@ -176,7 +176,7 @@ func TestDomainReport(t *testing.T) {
 	defer ctrl.Finish()
 
 	storage := storage.NewMockURLReport(ctrl)
-	shortenService := service.NewShortenURLService(nil, storage)
+	shortenService := service.NewShortenURLService(nil, storage, nil)
 
 	req := httptest.NewRequest("GET", "/report/1", nil)
 	req.SetPathValue("count", "5")
@@ -193,4 +193,52 @@ func TestDomainReport(t *testing.T) {
 
 	require.Equal(t, resp.Count, 3)
 	require.Len(t, resp.Items, 3)
+}
+
+func TestRedirect(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	storage := storage.NewMockURLStorage(ctrl)
+	shortenService := service.NewShortenURLService(nil, nil, storage)
+
+	req := httptest.NewRequest("GET", "/re45da", nil)
+	req.SetPathValue("count", "5")
+	req.URL, _ = url.Parse("localhost:8080/re45da")
+	respWriter := httptest.NewRecorder()
+
+	sURL, err := url.Parse("https://snipr.com/sniper")
+	require.Nil(t, err)
+
+	storage.EXPECT().GetOriginalURL(gomock.Any(), "localhost:8080/re45da").Return(&models.ShortenedURL{
+		URL:          req.URL,
+		ShortURL:     sURL,
+		TTLInSeconds: 1000,
+	}, nil)
+	shortenService.Redirect(respWriter, req)
+	require.Equal(t, respWriter.Result().StatusCode, http.StatusFound)
+}
+
+func TestRedirectExpired(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	storage := storage.NewMockURLStorage(ctrl)
+	shortenService := service.NewShortenURLService(nil, nil, storage)
+
+	req := httptest.NewRequest("GET", "/re45da", nil)
+	req.SetPathValue("count", "5")
+	req.URL, _ = url.Parse("localhost:8080/re45da")
+	respWriter := httptest.NewRecorder()
+
+	sURL, err := url.Parse("https://snipr.com/sniper")
+	require.Nil(t, err)
+
+	storage.EXPECT().GetOriginalURL(gomock.Any(), "localhost:8080/re45da").Return(&models.ShortenedURL{
+		URL:          req.URL,
+		ShortURL:     sURL,
+		TTLInSeconds: -1000,
+	}, nil)
+	shortenService.Redirect(respWriter, req)
+	require.Equal(t, respWriter.Result().StatusCode, http.StatusNotFound)
 }

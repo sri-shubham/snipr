@@ -57,6 +57,6 @@ func ParseConfig(path string) (*AppConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println(conf)
 	return conf, nil
 }

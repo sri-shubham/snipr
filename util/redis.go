@@ -21,7 +21,7 @@ func OpenRedisConn(conf *config.RedisConfig) (*redis.Client, error) {
 			return nil, err
 		}
 
-		rdb := redis.NewClient(opt)
+		rdb = redis.NewClient(opt)
 		_, err = rdb.Ping(context.Background()).Result()
 		if err != nil && count == 0 {
 			return nil, err

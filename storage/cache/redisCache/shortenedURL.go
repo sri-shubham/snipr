@@ -17,11 +17,16 @@ type RedisShortenedURLStorage struct {
 func (p RedisShortenedURLStorage) GetOriginalURL(ctx context.Context, shortURL string) (*models.ShortenedURL, error) {
 	value, err := p.Redis.Get(ctx, shortURL).Result()
 	if err != nil {
-		return nil, err
+		return nil, util.PresentStorageErrors(err)
 	}
 
-	shortenedURL := &models.ShortenedURL{}
-	err = json.Unmarshal([]byte(value), shortenedURL)
+	rShortenedURL := &models.JSONShortenedURL{}
+	err = json.Unmarshal([]byte(value), rShortenedURL)
+	if err != nil {
+		return nil, util.PresentStorageErrors(err)
+	}
+
+	shortenedURL, err := models.MapJsonShortenedURLModel(rShortenedURL)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +36,8 @@ func (p RedisShortenedURLStorage) GetOriginalURL(ctx context.Context, shortURL s
 
 // StoreShortURL implements storage.URLStorage.
 func (p RedisShortenedURLStorage) StoreShortURL(ctx context.Context, shortenedURL *models.ShortenedURL) error {
-	jsonBytes, err := json.Marshal(shortenedURL)
+	redisShortenedURL := models.PresentJsonShortenedURLModel(shortenedURL)
+	jsonBytes, err := json.Marshal(redisShortenedURL)
 	if err != nil {
 		return err
 	}

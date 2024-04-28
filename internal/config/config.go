@@ -8,9 +8,18 @@ import (
 )
 
 type AppConfig struct {
-	Redis *RedisConfig `mapstructure:"redis"`
+	Name      string           `mapstructure:"name"`
+	Host      string           `mapstructure:"host"`
+	Port      int              `mapstructure:"port"`
+	Redis     *RedisConfig     `mapstructure:"redis"`
+	Postgres  *PostgresConfig  `mapstructure:"postgres"`
+	Shortener *ShortenerConfig `mapstructure:"shortener"`
+}
 
-	Postgres *PostgresConfig `mapstructure:"postgres"`
+type ShortenerConfig struct {
+	MinLength       int `json:"minLength"`
+	CustomMinLength int `json:"customMinLength"`
+	CustomMaxLength int `json:"customMaxLength"`
 }
 
 type RedisConfig struct {
@@ -57,6 +66,6 @@ func ParseConfig(path string) (*AppConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("%#v\n", conf)
+
 	return conf, nil
 }

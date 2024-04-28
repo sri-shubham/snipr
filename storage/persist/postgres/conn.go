@@ -17,6 +17,7 @@ func GetDB(config *config.PostgresConfig) (*bun.DB, error) {
 		db, err = util.OpenPostgresConn(config)
 	})
 	if err != nil {
+		
 		return nil, err
 	}
 	return db, nil

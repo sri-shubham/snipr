@@ -1,3 +1,4 @@
+//go:generate mockgen -source=shortenedURL.go -destination shorten_mock.go -package storage
 package storage
 
 import (
@@ -16,7 +17,7 @@ type URLStorage interface {
 }
 
 func NewPGShortenedURLStorage(db *bun.DB) URLStorage {
-	return postgres.PGShortenedURLStorage{
+	return &postgres.PGShortenedURLStorage{
 		DB: db,
 	}
 }

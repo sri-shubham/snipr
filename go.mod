@@ -6,7 +6,7 @@ toolchain go1.24.1
 require (
 	github.com/golang/mock v1.6.0
 	github.com/jxskiss/base62 v1.1.0
-	github.com/redis/go-redis/v9 v9.5.1
+	github.com/redis/go-redis/v9 v9.5.5
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
 	github.com/uptrace/bun v1.2.1
